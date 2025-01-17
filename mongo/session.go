@@ -99,6 +99,7 @@ func (s *Session) EndSession(ctx context.Context) {
 	s.clientSession.EndSession()
 }
 
+<<<<<<< Updated upstream
 // WithTransaction starts a transaction on this session and runs the fn
 // callback. Errors with the TransientTransactionError and
 // UnknownTransactionCommitResult labels are retried for up to 120 seconds.
@@ -126,6 +127,19 @@ func (s *Session) WithTransaction(
 	fn func(ctx context.Context) (interface{}, error),
 	opts ...options.Lister[options.TransactionOptions],
 ) (interface{}, error) {
+=======
+// WithTransaction implements the Session interface.
+func (s *sessionImpl) WithTransaction(
+	ctx context.Context,
+	fn func(ctx SessionContext) (interface{}, error),
+	opts ...*options.TransactionOptions,
+) (interface{}, error) {
+	var options options.TransactionOptions
+	if len(opts) > 0 {
+		options = *opts[0]
+	}
+
+>>>>>>> Stashed changes
 	timeout := time.NewTimer(withTransactionTimeout)
 	defer timeout.Stop()
 	var err error
@@ -149,7 +163,7 @@ func (s *Session) WithTransaction(
 			default:
 			}
 
-			if errorHasLabel(err, driver.TransientTransactionError) {
+			if !options.NonRetryableOnTransientErrors && errorHasLabel(err, driver.TransientTransactionError) {
 				continue
 			}
 			return res, err
@@ -194,7 +208,7 @@ func (s *Session) WithTransaction(
 				if cerr.HasErrorLabel(driver.UnknownTransactionCommitResult) && !cerr.IsMaxTimeMSExpiredError() {
 					continue
 				}
-				if cerr.HasErrorLabel(driver.TransientTransactionError) {
+				if !options.NonRetryableOnTransientErrors && cerr.HasErrorLabel(driver.TransientTransactionError) {
 					break CommitLoop
 				}
 			}
