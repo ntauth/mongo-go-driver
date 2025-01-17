@@ -39,6 +39,9 @@ type TransactionOptions struct {
 	// be used in its place to control the amount of time that a single operation can run before returning an error.
 	// MaxCommitTime is ignored if Timeout is set on the client.
 	MaxCommitTime *time.Duration
+
+	// NonRetryableOnTransientErrors indicates whether the transaction should not be retried on transient errors.
+	NonRetryableOnTransientErrors bool
 }
 
 // Transaction creates a new TransactionOptions instance.

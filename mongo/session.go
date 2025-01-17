@@ -177,8 +177,16 @@ func (s *sessionImpl) EndSession(ctx context.Context) {
 }
 
 // WithTransaction implements the Session interface.
-func (s *sessionImpl) WithTransaction(ctx context.Context, fn func(ctx SessionContext) (interface{}, error),
-	opts ...*options.TransactionOptions) (interface{}, error) {
+func (s *sessionImpl) WithTransaction(
+	ctx context.Context,
+	fn func(ctx SessionContext) (interface{}, error),
+	opts ...*options.TransactionOptions,
+) (interface{}, error) {
+	var options options.TransactionOptions
+	if len(opts) > 0 && opts[0] != nil {
+		options = *opts[0]
+	}
+
 	timeout := time.NewTimer(withTransactionTimeout)
 	defer timeout.Stop()
 	var err error
@@ -202,7 +210,7 @@ func (s *sessionImpl) WithTransaction(ctx context.Context, fn func(ctx SessionCo
 			default:
 			}
 
-			if errorHasLabel(err, driver.TransientTransactionError) {
+			if !options.NonRetryableOnTransientErrors && errorHasLabel(err, driver.TransientTransactionError) {
 				continue
 			}
 			return res, err
@@ -247,7 +255,7 @@ func (s *sessionImpl) WithTransaction(ctx context.Context, fn func(ctx SessionCo
 				if cerr.HasErrorLabel(driver.UnknownTransactionCommitResult) && !cerr.IsMaxTimeMSExpiredError() {
 					continue
 				}
-				if cerr.HasErrorLabel(driver.TransientTransactionError) {
+				if !options.NonRetryableOnTransientErrors && cerr.HasErrorLabel(driver.TransientTransactionError) {
 					break CommitLoop
 				}
 			}
